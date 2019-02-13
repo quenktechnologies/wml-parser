@@ -2,8 +2,6 @@ import * as fs from 'fs';
 import { assert } from '@quenk/test/lib/assert';
 import { parse } from '../src';
 
-var tests = null;
-
 function json(tree: any): string {
     return JSON.stringify(tree);
 }
@@ -42,13 +40,13 @@ function makeTest(test, index) {
 
 }
 
-tests = {
+const tests = {
 
-    'should parse all import': {
-        input: `import * as lib from "path/to/libs" <tag/>`
+    'should parse qualified import': {
+        input: `{% import * as lib from "path/to/libs" %}`
     },
     'should parse named import': {
-        input: `import {A, B} from "path/to/a/b"`
+        input: `{% import B from "path/to/a/b" %}`
     },
     'should parse a self closing tag': {
         input: '<simple/>'
@@ -79,7 +77,8 @@ tests = {
             'Click Here</a><table/></panel>'
     },
     'should parse parent tags with tag children (L3)': {
-        input: '<panel><a href="link">Click Here</a><table/><panel c="22"></panel></panel>'
+        input: '<panel><a href="link">Click Here</a><table/>' +
+            '<panel c="22"></panel></panel>'
     },
     'should do it all together now': {
 
@@ -155,43 +154,40 @@ tests = {
 
     'should parse short fun statements': {
 
-        input: '{% fun vue = <View/> %}'
+        input: '{% fun vue () = <View/> %}'
 
     },
 
     'should parse short fun statements with arguments': {
 
-        input: '{% fun vue a -> b -> c:String = <View a={{a}} b={{b}} c={{c}}/> %}'
+        input: '{% fun vue (a:String) (b:String) (c:String) = ' +
+            '<View a={{a}} b={{b}} c={{c}}/> %}'
 
     },
 
     'should parse short fun statements with type classes': {
 
-        input: '{% fun vue [A,B:C,C] a:A -> b:B = {{ (a + b) + c }} %}'
+        input: '{% fun vue [A,B:C,C] (a:A) (b:B) = ' +
+            '{{ (a + b) + c }} %}'
 
     },
 
     'should parse extended fun statements': {
 
-        input: '{% fun vue %} <View/> {% endfun %}'
+        input: '{% fun vue () %} <View/> {% endfun %}'
 
     },
 
     'should parse extended fun statements with arguments': {
 
-        input: '{% fun vue a -> b -> c:String %}<View a={{a}} b={{b}} c={{c}}/> {% endfun %}'
+        input: '{% fun vue (a:String) (b:String) (c:String) %}' +
+            '<View a={{a}} b={{b}} c={{c}}/> {% endfun %}'
 
     },
 
     'should parse extended fun statements with type classes': {
 
-        input: '{% fun vue [A,B:C,C] (a:A -> b:B) %} {{ (a + b) + c }} {% endfun %}'
-
-    },
-
-    'should parse export from statements': {
-
-        input: '{% export {_view } from "somewhere" %}'
+        input: '{% fun vue [A,B:C,C] (a:A) (b:B) %} {{ (a + b) + c }} {% endfun %}'
 
     },
 
@@ -208,12 +204,13 @@ tests = {
 
     'should allow for statement as child of fun': {
 
-        input: '{% fun sven %} {% for a in b %} {{b}} {% endfor %} {% endfun %}'
+        input: '{% fun sven () %} {% for a in b %} {{b}} {% endfor %} {% endfun %}'
 
     },
     'should allow if statement as child of  fun': {
 
-        input: '{% fun ate (o:Object) %} {% if a %} {{a}} {% else %} {{a}} {% endif %} {% endfun %}'
+        input: '{% fun ate (o:Object) %} {% if a %} {{a}} {% else %} {{a}} ' +
+            '{% endif %} {% endfun %}'
 
     },
     'should allow for booleans in interpolations': {
@@ -224,7 +221,7 @@ tests = {
 
     'should allow calls on expressions': {
 
-        input: '<div>{{((@content() || bar))(foo)}}</div>'
+        input: '<div>{{(@content() || bar)(foo)}}</div>'
 
     },
     'should allow boolean attribute values': {
@@ -234,17 +231,12 @@ tests = {
     },
     'should parse typed views': {
 
-        input: '{% view Main (Context[String]) %} <p>{{@value}}</p>{% endview %}'
+        input: '{% view Main (Context[String]) %} <p>{{@value}}</p>'
 
     },
     'should parse typed views with type classes': {
 
-        input: '{% view Main [A,B] (Context[A,B]) %} <p>{{@values}}</p> {% endview %}'
-
-    },
-    'should parse attribute reads': {
-
-        input: `<p class={{concat([x, someValue['ww:class' as String ], some.other.value['ww:variant' as String ?'default']])}}/>`
+        input: '{% view Main [A,B] (Context[A,B]) %} <p>{{@values}}</p>'
 
     },
     'should parse context variables': {
@@ -252,19 +244,9 @@ tests = {
         input: '<Input name={{@level.name}}/>'
 
     },
-    'should allow read expressions in if expressions': {
-
-        input: `<p>{% if @taggin['attr' as String] %}x{% else %} yz fefd {% endif %}</p>`
-
-    },
     'should allow construct expression': {
 
         input: '<TextView android:thing={value:1}>{{Person(@value)}}</TextView>'
-
-    },
-    'should allow typed main': {
-
-        input: '{% main Something (Date) %} <p>{{@toString()}}</p>'
 
     },
     'should allow view construction': {
@@ -284,12 +266,12 @@ tests = {
     },
     'should allow fun statements to specify a context (part 2)': {
 
-        input: `{% fun action (Date)(n:String) %} <p>{{n}}</p> {% endfun %}`
+        input: `{% fun action (_:Date) (n:String) %} <p>{{n}}</p> {% endfun %}`
 
     },
     'should parse list types': {
 
-        input: '{% fun action [A](s: String[] -> a:A[]) = {{  \'${s}${a}\' }} %}'
+        input: '{% fun action [A] (s: String[]) (a:A[]) = {{  \'${s}${a}\' }} %}'
     },
     'should allow context properties as fun application': {
 
@@ -300,7 +282,7 @@ tests = {
 
         input: `
 
-{% fun template [A](Date[A])(o:A -> _:String -> __:A[]) = {{String(o)}}  %}
+{% fun template [A] (d: Date[A]) (o:A) (_:String) (__:A[]) = {{String(o)}}  %}
 
 {% view Results [A](Date[A]) %}
 
@@ -316,20 +298,13 @@ tests = {
 
     {% endfor %}
 
-  </ul>
-
-{% endview %}`
+  </ul>`
 
     }
 
 };
 
 describe('Parser', function() {
-
-    beforeEach(function() {
-
-
-    });
 
     describe('parse()', function() {
 
