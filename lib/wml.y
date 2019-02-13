@@ -48,18 +48,10 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 
 <*>\s+                                                   return;               
 
-<INITIAL>'import'                                        return 'IMPORT';
-<INITIAL>'from'                                          return 'FROM';
-<INITIAL>'using'                                         return 'USING';
-<INITIAL>'as'                                            return 'AS';
 <INITIAL>'{%'                this.begin('CONTROL');      return '{%';
 <INITIAL>'<!--'              this.begin('COMMENT');      return;
 <INITIAL>'<'                 this.begin('TAG');          return '<';
 <INITIAL>'{{'                this.begin('EXPRESSION');   return '{{';
-<INITIAL>{Constructor}                                   return 'CONSTRUCTOR';
-<INITIAL>{Identifier}                                    return 'IDENTIFIER';
-<INITIAL>'{'                                             return '{';
-<INITIAL>'}'                                             return '}';
 
 <TAG>'true'                                              return 'TRUE';
 <TAG>'false'                                             return 'FALSE';
@@ -81,8 +73,9 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 <CHILDREN>'}'                                            return '}';
 <CHILDREN>[^/<>{%}]+                                     return 'CHARACTERS';
 
-<CONTROL>'main'                                          return 'MAIN';
-<CONTROL>'endmain'                                       return 'ENDMAIN';
+<CONTROL>'import'                                        return 'IMPORT';
+<CONTROL>'from'                                          return 'FROM';
+<CONTROL>'as'                                            return 'AS';
 <CONTROL>'macro'                                         return 'MACRO';
 <CONTROL>'endmacro'                                      return 'ENDMACRO';
 <CONTROL>'for'                                           return 'FOR';
@@ -92,23 +85,17 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 <CONTROL>'else'                                          return 'ELSE';
 <CONTROL>'elseif'                                        return 'ELSEIF';
 <CONTROL>'in'                                            return 'IN';
-<CONTROL>'case'                                          return 'CASE';
-<CONTROL>'endcase'                                       return 'ENDCASE';
+<CONTROL>'of'                                            return 'OF';
 <CONTROL>'export'                                        return 'EXPORT';
 <CONTROL>'from'                                          return 'FROM';
 <CONTROL>'view'                                          return 'VIEW';
-<CONTROL>'using'                                         return 'USING';
-<CONTROL>'endview'                                       return 'ENDVIEW';
 <CONTROL>'instanceof'                                    return 'INSTANCEOF';
 <CONTROL>'this'                                          return 'THIS';
 <CONTROL>'fun'                                           return 'FUN';
 <CONTROL>'endfun'                                        return 'ENDFUN';
 <CONTROL>'as'                                            return 'AS';
-<CONTROL>'::'                                            return '::';
 <CONTROL>'@'                                             return '@';
-<CONTROL>'()'                                            return '()';
-<CONTROL>'->'                                            return '->';
-<CONTROL>'='              this.popState();this.begin('CONTROL_CHILD');return '=';
+<CONTROL>'=' this.popState();this.begin('CONTROL_CHILD');return '=';
 <CONTROL>{Constructor}                                   return 'CONSTRUCTOR';
 <CONTROL>{Identifier}                                    return 'IDENTIFIER';
 <CONTROL>'%}'                this.popState();            return '%}';
@@ -183,48 +170,18 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 
 module
 
-          : imports exports main EOF
-            {$$ =
-            new yy.ast.Module($1, $2, $3, @$); 
-            return $$;
-            }
-
-          | imports exports EOF
-            {$$ =
-            new yy.ast.Module($1, $2, null, @$); 
-            return $$;
-            }
-
-          | imports main EOF
-            {$$ =
-            new yy.ast.Module($1, [], $2, @$); 
-            return $$;
-            }
+          : imports exports EOF
+            {$$ = new yy.ast.Module($1, $2, @$); return $$;}
 
           | imports EOF
-            {$$ =
-            new yy.ast.Module($1, [], null, @$); 
-            return $$;
-            }
-
-          | exports main EOF
-            {$$ =
-            new yy.ast.Module([], $1, $2, @$); 
-            return $$;
-            }
+            {$$ = new yy.ast.Module($1, [], @$); return $$;} 
 
           | exports EOF
-            {$$ =
-            new yy.ast.Module([], $1, null, @$); 
-            return $$;
-            }
+            {$$ = new yy.ast.Module([], $1, @$); return $$;}
 
-          | main EOF
-            {$$ =
-            new yy.ast.Module([], [], $1, @$); 
-            return $$;
-            }
-         ;
+          | EOF
+            {$$ = new yy.ast.Module([], [], null, @$); }
+          ;
 
 imports
           : import_statement          {$$ =  [$1];         }
@@ -232,14 +189,14 @@ imports
           ;
 
 import_statement
-          : IMPORT import_member FROM string_literal (';')?
-            {$$ = new yy.ast.ImportStatement($2, $4, @$);}
+          : '{%' IMPORT import_member FROM string_literal '%}'
+            {$$ = new yy.ast.ImportStatement($3, $5, @$);}
           ;
 
 import_member
           : aggregate_member
           | aliased_member
-          | composite_member
+          | member
           ;
 
 aliased_member
@@ -252,33 +209,8 @@ aggregate_member
             {$$ = new yy.ast.AggregateMember($3, @$);}
           ;
 
-composite_member
-          : '{' member_list '}'
-            {$$ = new yy.ast.CompositeMember($2, @$);}
-          ;
-
-member_list
-          : (member | aliased_member)
-            {$$ = [$1];}
-
-          | member_list ',' (member | aliased_member)
-            {$$ = $1.concat($3);}
-          ;
-
 member
           : (unqualified_identifier | unqualified_constructor)
-          ;
-
-main
-          : '{%' MAIN unqualified_constructor? type_classes? '(' type ')' parameters? '%}' tag end_main?
-            { $$ = new yy.ast.TypedMain($3, $4||[], $6, $8||[], $10, @$); }
-
-          | tag 
-            {$$ = new yy.ast.UntypedMain($1, @$); }
-          ;
-
-end_main
-          : '{%' ENDMAIN '%}'
           ;
 
 exports
@@ -290,88 +222,40 @@ exports
           ;
 
 export
-          : export_statement 
-          | view_statement 
+          : view_statement           
           | fun_statement 
+          | tag
             {$$ = $1; }
           ;
 
-export_statement
-          : '{%' EXPORT composite_member FROM string_literal   '%}'
-            {$$ = new yy.ast.ExportStatement($3, $5, @$);  }
-          ;
-
 view_statement
-          : '{%' VIEW unqualified_constructor type_classes? '(' type ')' parameters?'%}'
-            tag
-            '{%' ENDVIEW '%}'
-            { $$ = new yy.ast.ViewStatement($3, $4||[], $6, $8||[], $10, @$); }
+
+          : '{%' VIEW unqualified_constructor type_params? '(' type ')' '%}'
+             tag
+            {$$ = new yy.ast.ViewStatement($3, $4||[], $6, $9, @$);}
           ;
 
 fun_statement
 
-          : '{%' FUN unqualified_identifier type_classes context_type curried_parameters '%}' 
-            children '{%' ENDFUN '%}'
-            { $$ = new yy.ast.FunStatement($3, $4, $5, $6, $8, @$); }
+          : '{%' FUN unqualified_identifier type_params parameters '%}' 
+              children 
+            '{%' ENDFUN '%}'
+            {$$ = new yy.ast.FunStatement($3, $4, $5, $6, @$); }
 
-          | '{%' FUN unqualified_identifier type_classes context_type '%}' 
-            children '{%' ENDFUN '%}'
-            { $$ = new yy.ast.FunStatement($3, $4, $5, [], $7, @$); }
+          | '{%' FUN unqualified_identifier parameters '%}' 
+              children 
+            '{%' ENDFUN '%}'
+            {$$ = new yy.ast.FunStatement($3, [], $4, $6, @$); }
 
-          | '{%' FUN unqualified_identifier type_classes curried_parameters '%}' 
-            children '{%' ENDFUN '%}'
-            { $$ = new yy.ast.FunStatement($3, $4, null, $5, $7, @$); }
+          | '{%' FUN unqualified_identifier type_params parameters '='
+              child '%}' 
+            {$$ = new yy.ast.FunStatement($3, $4, $5, $7, @$); }
 
-          | '{%' FUN unqualified_identifier type_classes '%}' 
-            children '{%' ENDFUN '%}'
-            { $$ = new yy.ast.FunStatement($3, $4, null, [], $6, @$); }
-
-          | '{%' FUN unqualified_identifier context_type curried_parameters '%}' 
-            children '{%' ENDFUN '%}'
-            { $$ = new yy.ast.FunStatement($3, [], $4, $5, $7, @$); }
-
-          | '{%' FUN unqualified_identifier context_type '%}' 
-            children '{%' ENDFUN '%}'
-            { $$ = new yy.ast.FunStatement($3, [], $4, [], $6, @$); }
-
-          | '{%' FUN unqualified_identifier curried_parameters '%}' 
-            children '{%' ENDFUN '%}'
-            { $$ = new yy.ast.FunStatement($3,[],null,$4,$6,@$); }
-
-          | '{%' FUN unqualified_identifier '%}' children '{%' ENDFUN '%}'
-            { $$ = new yy.ast.FunStatement($3,[],null,[],$5,@$); }
-
-          | '{%' FUN unqualified_identifier type_classes context_type curried_parameters '=' child '%}' 
-            { $$ = new yy.ast.FunStatement($3, $4, $5, $6, $8, @$); }
-
-          | '{%' FUN unqualified_identifier type_classes context_type '=' child '%}' 
-            { $$ = new yy.ast.FunStatement($3, $4, $5, [], $7, @$); }
-
-          | '{%' FUN unqualified_identifier type_classes curried_parameters '=' child '%}' 
-            { $$ = new yy.ast.FunStatement($3, $4, null, $5, $7, @$); }
-
-          | '{%' FUN unqualified_identifier type_classes '=' child '%}' 
-            { $$ = new yy.ast.FunStatement($3, $4, null, [], $6, @$); }
-
-          | '{%' FUN unqualified_identifier context_type curried_parameters '=' child '%}' 
-            { $$ = new yy.ast.FunStatement($3, [], $4, $5, $7, @$); }
-
-          | '{%' FUN unqualified_identifier context_type '=' child '%}' 
-            { $$ = new yy.ast.FunStatement($3, [], $4, [], $6, @$); }
-
-          | '{%' FUN unqualified_identifier curried_parameters '=' child '%}' 
-            { $$ = new yy.ast.FunStatement($3,[],null,$4,$6,@$); }
-
-          | '{%' FUN unqualified_identifier '=' child '%}'
-            { $$ = new yy.ast.FunStatement($3,[],null,[],$5,@$); }
+          | '{%' FUN unqualified_identifier parameters '=' child '%}' 
+            {$$ = new yy.ast.FunStatement($3, [], $4, $6, @$); }
           ;
 
-context_type
-          : '(' type ')'
-            { $$ = $2; }
-          ;
-
-type_classes
+type_params
           : '[' type_class_list ']' {$$ = $2; }
           ;
 
@@ -385,55 +269,46 @@ type_class_list
 
 type_class
           : unqualified_identifier 
-           {$$ = new yy.ast.TypeClass($1, null, @$);}
+           {$$ = new yy.ast.TypedParameter($1, null, @$);}
 
           | unqualified_identifier ':' type
-           {$$ = new yy.ast.TypeClass($1, $3, @$);}
+           {$$ = new yy.ast.TypedParameter($1, $3, @$);}
 
           | unqualified_constructor 
-           {$$ = new yy.ast.TypeClass($1, null, @$);}
+           {$$ = new yy.ast.TypedParameter($1, null, @$);}
 
           | unqualified_constructor ':' type
-           {$$ = new yy.ast.TypeClass($1, $3, @$);}
+           {$$ = new yy.ast.TypedParameter($1, $3, @$);}
           ;
 
 type 
-          : cons type_classes?
+          : cons type_params?
             { $$ = new yy.ast.Type($1, $2||[], false, @$); }               
 
-          | cons type_classes '[' ']'
+          | cons type_params '[' ']'
             { $$ = new yy.ast.Type($1, $2, true, @$); }
 
           | cons '[' ']'
             { $$ = new yy.ast.Type($1, [], true, @$); }
-          
           ;
 
-curried_parameters
-          : parameter 
-            {$$ = [$1]; }
-
-          | curried_parameters ('->'|',') parameter
-            {$$ = $1.concat($3); }
-
-          | '(' curried_parameters ')'
-            {$$ = $2; }
-
-          | '(' ')'
-            {$$ = [];}
-          ; 
-
 parameters
-          : '(' ')'                  {$$ = [];}
-          | '(' parameter_list ')'   {$$ = $2;}
+          : '(' ')'                
+            {$$ = [];}
+
+          | '(' parameter ')'  
+            {$$ = [$2];}
+
+          | parameters '(' parameter ')'
+            {$$ = $1.concat($3); }
           ;
 
 parameter_list
           : parameter
-            {$$ = [$1];                                     }
+            {$$ = [$1]; }
 
           | parameter_list ',' parameter
-            {$$ = $1.concat($3);                            }
+            {$$ = $1.concat($3); }
           ;
 
 parameter
@@ -502,7 +377,8 @@ attribute
             $1, $3, @$);}
 
           | unqualified_identifier ':' unqualified_identifier
-            {$$ = new yy.ast.Attribute($1, $3, new yy.ast.BooleanLiteral(true, @$), @$);  }
+            {$$ = new yy.ast.Attribute($1, $3,
+            new yy.ast.BooleanLiteral(true, @$), @$);  }
 
           | unqualified_identifier
             {$$ = new yy.ast.Attribute(
@@ -539,32 +415,44 @@ control
           ;
 
 for_statement
-          : '{%' FOR parameter IN expression '%}' children '{%' ENDFOR '%}'
-            {$$ = new yy.ast.ForStatement($3, null, null, $5, $7, [], @$);}
+          : for_in
+            {$$ = $1;}
 
-          | '{%' FOR parameter ',' parameter IN expression '%}' children '{%' ENDFOR '%}'
-            {$$ = new yy.ast.ForStatement($3, $5, null, $7, $9, [], @$);}
-
-          | '{%' FOR parameter ',' parameter ',' parameter IN expression '%}'
-            children '{%' ENDFOR '%}'
-            {$$ = new yy.ast.ForStatement($3, $5, $7, $9, $11, [], @$);}
-
-          | '{%' FOR parameter IN expression '%}' 
-             children 
-             '{%' ELSE '%}' children '{%' ENDFOR '%}'
-            {$$ = new yy.ast.ForStatement($3, null, null, $5, $7, $11, @$);}
-
-          | '{%' FOR parameter ',' parameter IN expression '%}' 
-            children 
-            '{%' ELSE '%}' children '{%' ENDFOR '%}'
-            {$$ = new yy.ast.ForStatement($3, $5, null, $7, $9, $13, @$);}
-
-          | '{%' FOR parameter ',' parameter ',' parameter IN expression '%}'
-            children 
-            '{%' ELSE '%}' children '{%' ENDFOR '%}'
-            {$$ = new yy.ast.ForStatement($3, $5, null, $7, $9, $15, @$);}
+          | for_of 
+            {$$ = $1;}
           ;
 
+for_in
+          : '{%' FOR for_parameters IN expression '%}' children '{%' ENDFOR '%}'
+            {$$ = new yy.ast.ForInStatement($3, $5, $7, [], @$);}
+
+          | '{%' FOR for_parameters IN expression '%}' 
+             children 
+             '{%' ELSE '%}' children '{%' ENDFOR '%}'
+            {$$ = new yy.ast.ForInStatement($3, $5, $7, $11, @$);}
+          ;
+
+for_of
+          : '{%' FOR for_parameters OF expression '%}' children '{%' ENDFOR '%}'
+            {$$ = new yy.ast.ForOfStatement($3, $5, $7, [], @$);}
+
+          | '{%' FOR for_parameters OF expression '%}' 
+             children 
+             '{%' ELSE '%}' children '{%' ENDFOR '%}'
+            {$$ = new yy.ast.ForOfStatement($3, $5, $7, $11, @$);}
+          ;
+
+for_parameters
+          : parameter 
+            {$$ = [$1];}
+
+          | parameter ',' parameter
+            {$$ = [$1, $2];}
+          
+          | paramter ',' paramter 
+            {$$ = [$1, $2, $3];}
+          ;
+            
 if_statement
           : '{%' IF expression '%}' children else_clause
            {$$ = new yy.ast.IfStatement($3, $5, $6, @$); }
@@ -614,9 +502,6 @@ expression
           | simple_expression
             { $$ = $1; }
 
-          | read_expression
-            { $$ = $1; }
-
           | function_expression
             { $$ = $1; }
 
@@ -653,9 +538,17 @@ unary_expression
           ;
 
 simple_expression
-          : (view_construction|fun_application|construct_expression | call_expression | member_expression 
-             | literal | context_property | cons | identifier | context_variable)
-            { $$ = $1; }
+          :  (view_construction
+             | fun_application
+             | construct_expression 
+             | call_expression 
+             | member_expression 
+             | literal 
+             | context_property 
+             | cons 
+             | identifier 
+             | context_variable)
+             { $$ = $1; }
           ;
 
 view_construction
@@ -773,48 +666,6 @@ member_expression
 
           | member_expression '.' unqualified_identifier
             {$$ = new yy.ast.MemberExpression($1, $3, @$); }
-          ;
-
-read_expression
-
-          : identifier '[' readable_expression AS type ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, null, @$);       }
-
-          | identifier '[' readable_expression AS type '?' expression ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, $7, @$);         }
-
-          | context_variable '[' readable_expression AS type ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, null, @$);       }
-
-          | context_variable '[' readable_expression AS type '?' expression ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, $7, @$);         }
-
-          | context_property '[' readable_expression AS type ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, null, @$);       }
-
-          | context_property '[' readable_expression AS type '?' expression ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, $7, @$);         }
-
-          | member_expression '[' readable_expression AS type ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, null, @$);       }
-
-          | member_expression '[' readable_expression AS type '?' expression ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, $7, @$);         }
-
-          | '(' expression ')'  '[' expression AS type '?' expression ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, $7, @$);       }
-
-          | '(' expression ')' '[' expression AS type ']'
-            {$$ = new yy.ast.ReadExpression($1, $3, $5, null, @$);       }
-          ;
-
-readable_expression
-
-          : (string_literal|member_expression|context_property|call_expression)
-            {$$ = $1;}
-
-          | '(' expression ')'
-            {$$ = $2;}
           ;
 
 function_expression

@@ -24,10 +24,9 @@ export interface AST {
 export declare class Module {
     imports: ImportStatement[];
     exports: Export[];
-    main: Main;
     location: Location;
     type: string;
-    constructor(imports: ImportStatement[], exports: Export[], main: Main, location: Location);
+    constructor(imports: ImportStatement[], exports: Export[], location: Location);
 }
 /**
  * ImportStatement
@@ -75,58 +74,32 @@ export declare class CompositeMember {
     constructor(members: (Member | AliasedMember)[], location: Location);
 }
 export declare type Member = UnqualifiedIdentifier | UnqualifiedConstructor;
-export declare type Main = TypedMain | UntypedMain;
-export declare class TypedMain {
-    id: UnqualifiedConstructor;
-    typeClasses: TypeClass[];
-    context: Type;
-    parameters: Parameter[];
-    tag: Tag;
-    location: Location;
-    type: string;
-    constructor(id: UnqualifiedConstructor, typeClasses: TypeClass[], context: Type, parameters: Parameter[], tag: Tag, location: Location);
-}
-export declare class UntypedMain {
-    tag: Tag;
-    location: Location;
-    type: string;
-    constructor(tag: Tag, location: Location);
-}
-export declare type Export = ExportStatement | FunStatement | ViewStatement;
-export declare class ExportStatement {
-    members: CompositeMember;
-    module: StringLiteral;
-    location: Location;
-    type: string;
-    constructor(members: CompositeMember, module: StringLiteral, location: Location);
-}
+export declare type Export = FunStatement | ViewStatement | Tag;
 /**
  * ViewStatement
  */
 export declare class ViewStatement {
     id: UnqualifiedConstructor;
-    typeClasses: TypeClass[];
+    typeParameters: TypeParameter[];
     context: Type;
-    parameters: Parameter[];
-    tag: Tag;
+    root: Tag;
     location: Location;
     type: string;
-    constructor(id: UnqualifiedConstructor, typeClasses: TypeClass[], context: Type, parameters: Parameter[], tag: Tag, location: Location);
+    constructor(id: UnqualifiedConstructor, typeParameters: TypeParameter[], context: Type, root: Tag, location: Location);
 }
 export declare class FunStatement {
     id: UnqualifiedIdentifier;
-    typeClasses: TypeClass[];
-    context: Type;
+    typeParameters: TypeParameter[];
     parameters: Parameter[];
-    body: Child | Child[];
+    body: Child[];
     location: Location;
     type: string;
-    constructor(id: UnqualifiedIdentifier, typeClasses: TypeClass[], context: Type, parameters: Parameter[], body: Child | Child[], location: Location);
+    constructor(id: UnqualifiedIdentifier, typeParameters: TypeParameter[], parameters: Parameter[], body: Child[], location: Location);
 }
 /**
- * TypeClass
+ * TypeParameter
  */
-export declare class TypeClass {
+export declare class TypeParameter {
     id: UnqualifiedConstructor;
     constraint: Type;
     location: Location;
@@ -135,11 +108,11 @@ export declare class TypeClass {
 }
 export declare class Type {
     id: UnqualifiedIdentifier | Constructor;
-    typeClasses: TypeClass[];
+    typeParameters: TypeParameter[];
     list: boolean;
     location: Location;
     type: string;
-    constructor(id: UnqualifiedIdentifier | Constructor, typeClasses: TypeClass[], list: boolean, location: Location);
+    constructor(id: UnqualifiedIdentifier | Constructor, typeParameters: TypeParameter[], list: boolean, location: Location);
 }
 export declare type Parameter = TypedParameter | UntypedParameter;
 export declare class TypedParameter {
@@ -190,16 +163,24 @@ export declare class Interpolation {
     constructor(expression: Expression, filters: Expression[], location: Location);
 }
 export declare type Control = ForStatement | IfStatement;
-export declare class ForStatement {
-    variable: Parameter;
-    index: Parameter;
-    all: Parameter;
-    list: Expression;
+export declare type ForStatement = ForInStatement | ForOfStatement;
+export declare class ForInStatement {
+    variables: Parameter[];
+    expression: Expression;
     body: Child[];
     otherwise: Child[];
     location: Location;
     type: string;
-    constructor(variable: Parameter, index: Parameter, all: Parameter, list: Expression, body: Child[], otherwise: Child[], location: Location);
+    constructor(variables: Parameter[], expression: Expression, body: Child[], otherwise: Child[], location: Location);
+}
+export declare class ForOfStatement {
+    variables: Parameter[];
+    expression: Expression;
+    body: Child[];
+    otherwise: Child[];
+    location: Location;
+    type: string;
+    constructor(variables: Parameter[], expression: Expression, body: Child[], otherwise: Child[], location: Location);
 }
 export declare class IfStatement {
     condition: Expression;

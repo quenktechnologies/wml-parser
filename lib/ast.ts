@@ -35,7 +35,6 @@ export class Module {
     constructor(
         public imports: ImportStatement[],
         public exports: Export[],
-        public main: Main,
         public location: Location) { }
 
 }
@@ -109,51 +108,11 @@ export type Member
     | UnqualifiedConstructor
     ;
 
-export type Main
-    = TypedMain
-    | UntypedMain
-    ;
-
-export class TypedMain {
-
-    type = 'typed-main';
-
-    constructor(
-        public id: UnqualifiedConstructor,
-        public typeClasses: TypeClass[],
-        public context: Type,
-        public parameters: Parameter[],
-        public tag: Tag,
-        public location: Location) { }
-
-}
-
-export class UntypedMain {
-
-    type = 'untyped-main';
-
-    constructor(
-        public tag: Tag,
-        public location: Location) { }
-
-}
-
 export type Export
-    = ExportStatement
-    | FunStatement
+    = FunStatement
     | ViewStatement
+    | Tag
     ;
-
-export class ExportStatement {
-
-    type = 'export-statement';
-
-    constructor(
-        public members: CompositeMember,
-        public module: StringLiteral,
-        public location: Location) { }
-
-}
 
 /**
  * ViewStatement
@@ -164,10 +123,9 @@ export class ViewStatement {
 
     constructor(
         public id: UnqualifiedConstructor,
-        public typeClasses: TypeClass[],
+        public typeParameters: TypeParameter[],
         public context: Type,
-        public parameters: Parameter[],
-        public tag: Tag,
+        public root: Tag,
         public location: Location) { }
 
 }
@@ -178,18 +136,17 @@ export class FunStatement {
 
     constructor(
         public id: UnqualifiedIdentifier,
-        public typeClasses: TypeClass[],
-        public context: Type,
+        public typeParameters: TypeParameter[],
         public parameters: Parameter[],
-        public body: Child | Child[],
+        public body: Child[],
         public location: Location) { }
 
 }
 
 /**
- * TypeClass
+ * TypeParameter
  */
-export class TypeClass {
+export class TypeParameter {
 
     type = 'type-class';
 
@@ -206,7 +163,7 @@ export class Type {
 
     constructor(
         public id: UnqualifiedIdentifier | Constructor,
-        public typeClasses: TypeClass[],
+        public typeParameters: TypeParameter[],
         public list: boolean,
         public location: Location) { }
 
@@ -308,15 +265,31 @@ export type Control
     | IfStatement
     ;
 
-export class ForStatement {
+export type ForStatement
+    = ForInStatement
+    | ForOfStatement
+    ;
 
-    type = 'for-statement';
+export class ForInStatement {
+
+    type = 'for-in-statement';
 
     constructor(
-        public variable: Parameter,
-        public index: Parameter,
-        public all: Parameter,
-        public list: Expression,
+        public variables: Parameter[],
+        public expression: Expression,
+        public body: Child[],
+        public otherwise: Child[],
+        public location: Location) { }
+
+}
+
+export class ForOfStatement {
+
+    type = 'for-of-statement';
+
+    constructor(
+        public variables: Parameter[],
+        public expression: Expression,
         public body: Child[],
         public otherwise: Child[],
         public location: Location) { }
