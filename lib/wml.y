@@ -39,7 +39,7 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 %x CHILDREN
 %x COMMENT
 %x CONTROL
-%x EXPRESSION
+%x INTERPOLATION
 %x CONTROL_CHILD
 %x TAG
 %%
@@ -51,7 +51,7 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 <INITIAL>'{%'                this.begin('CONTROL');      return '{%';
 <INITIAL>'<!--'              this.begin('COMMENT');      return;
 <INITIAL>'<'                 this.begin('TAG');          return '<';
-<INITIAL>'{{'                this.begin('EXPRESSION');   return '{{';
+<INITIAL>'{{'                this.begin('INTERPOLATION');   return '{{';
 
 <TAG>'true'                                              return 'TRUE';
 <TAG>'false'                                             return 'FALSE';
@@ -60,11 +60,11 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 <TAG>'/>'                    this.popState();            return '/>';
 <TAG>'/'                                                 return 'NOSE';
 <TAG>'>'                     this.begin('CHILDREN');     return '>';
-<TAG>'{{'                    this.begin('EXPRESSION');   return '{{';
+<TAG>'{{'                    this.begin('INTERPOLATION');return '{{';
 <TAG>'{'                                                 return '{';
 <TAG>'}'                                                 return '}';
 
-<CHILDREN>'{{'               this.begin('EXPRESSION');   return '{{';
+<CHILDREN>'{{'               this.begin('INTERPOLATION');   return '{{';
 <CHILDREN>'{%'               this.begin('CONTROL');      return '{%';
 <CHILDREN>'<!--'             this.begin('COMMENT');      return;
 <CHILDREN>'</'               this.begin('TAG');          return '</';
@@ -103,29 +103,28 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 <CONTROL>'}'                                             return '}';
 
 <CONTROL_CHILD>'<'           this.begin('TAG');          return '<';
-<CONTROL_CHILD>'{{'          this.begin('EXPRESSION');   return '{{';
+<CONTROL_CHILD>'{{'          this.begin('INTERPOLATION');return '{{';
 <CONTROL_CHILD>'%}'          this.popState();            return '%}';
 <CONTROL_CHILD>{Constructor}                             return 'CONSTRUCTOR';
 <CONTROL_CHILD>{Identifier}                              return 'IDENTIFIER';
 <CONTROL_CHILD>'{'                                       return '{';
 <CONTROL_CHILD>'}'                                       return '}';
 
-<EXPRESSION>'|'                                          return '|';
-<EXPRESSION>'=>'                                         return '=>';
-<EXPRESSION>'->'                                         return '->';
-<EXPRESSION>'@'                                          return '@';
-<EXPRESSION>'instanceof'                                 return 'INSTANCEOF';
-<EXPRESSION>'true'                                       return 'TRUE';
-<EXPRESSION>'false'                                      return 'FALSE';
-<EXPRESSION>'if'                                         return 'IF';
-<EXPRESSION>'then'                                       return 'THEN';
-<EXPRESSION>'else'                                       return 'ELSE';
-<EXPRESSION>'as'                                         return 'AS';
-<EXPRESSION>{Constructor}                                return 'CONSTRUCTOR';
-<EXPRESSION>{Identifier}                                 return 'IDENTIFIER';
-<EXPRESSION>'}}'             this.popState();            return '}}';
-<EXPRESSION>'{'                                          return '{';
-<EXPRESSION>'}'                                          return '}';
+<INTERPOLATION>'|'                                       return '|';
+<INTERPOLATION>'->'                                      return '->';
+<INTERPOLATION>'@'                                       return '@';
+<INTERPOLATION>'instanceof'                              return 'INSTANCEOF';
+<INTERPOLATION>'true'                                    return 'TRUE';
+<INTERPOLATION>'false'                                   return 'FALSE';
+<INTERPOLATION>'if'                                      return 'IF';
+<INTERPOLATION>'then'                                    return 'THEN';
+<INTERPOLATION>'else'                                    return 'ELSE';
+<INTERPOLATION>'as'                                      return 'AS';
+<INTERPOLATION>{Constructor}                             return 'CONSTRUCTOR';
+<INTERPOLATION>{Identifier}                              return 'IDENTIFIER';
+<INTERPOLATION>'{'                                       return '{';
+<INTERPOLATION>'}'                                       return '}';
+<INTERPOLATION>'}}'             this.popState();         return '}}';
 
 <COMMENT>(.|\r|\n)*?'-->'    this.popState();            return;
 
@@ -160,9 +159,6 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 <*><<EOF>>                                               return 'EOF';
 
 /lex
-%right '?' ':' '=>'
-%right '!'
-%right ','
 
 %ebnf
 %start module
@@ -196,7 +192,7 @@ import_statement
 import_member
           : aggregate_member
           | aliased_member
-          | member
+          | composite_member
           ;
 
 aliased_member
@@ -209,8 +205,21 @@ aggregate_member
             {$$ = new yy.ast.AggregateMember($3, @$);}
           ;
 
+composite_member
+          : '(' member_list  ')'
+            {$$ = new yy.ast.CompositeMember($2, @$);}
+          ;
+
+member_list
+          : (member | aliased_member)
+            {$$ = [$1];}
+
+          | member_list ',' (member | aliased_member)
+            {$$ = $1.concat($3);}
+          ;
 member
           : (unqualified_identifier | unqualified_constructor)
+            {$$ = $1; }
           ;
 
 exports
@@ -240,7 +249,7 @@ fun_statement
           : '{%' FUN unqualified_identifier type_params parameters '%}' 
               children 
             '{%' ENDFUN '%}'
-            {$$ = new yy.ast.FunStatement($3, $4, $5, $6, @$); }
+            {$$ = new yy.ast.FunStatement($3, $4, $5, $7, @$); }
 
           | '{%' FUN unqualified_identifier parameters '%}' 
               children 
@@ -249,10 +258,10 @@ fun_statement
 
           | '{%' FUN unqualified_identifier type_params parameters '='
               child '%}' 
-            {$$ = new yy.ast.FunStatement($3, $4, $5, $7, @$); }
+            {$$ = new yy.ast.FunStatement($3, $4, $5, [$7], @$); }
 
           | '{%' FUN unqualified_identifier parameters '=' child '%}' 
-            {$$ = new yy.ast.FunStatement($3, [], $4, $6, @$); }
+            {$$ = new yy.ast.FunStatement($3, [], $4, [$6], @$); }
           ;
 
 type_params
@@ -474,32 +483,32 @@ characters
 
 arguments
           : '(' ')'
-            {$$ = [];                                      }
+            {$$ = []; }
 
           | '(' argument_list ')'
-            {$$ = $2;                                      }
+            {$$ = $2; }
 
           ;
 
 argument_list
           : expression
-            {$$ = [$1];                                    }
+            {$$ = [$1]; }
 
           | argument_list ',' expression
-            {$$ = $1.concat($3);                           }
+            {$$ = $1.concat($3); }
           ;
 
 expression
           : if_expression
             { $$ = $1; }
           
-          | binary_expression
+          | binary_expression 
             { $$ = $1; }
 
           | unary_expression
-            { $$ =$1; }
-
-          | simple_expression
+            { $$ = $1; }
+         
+          | simple_expression 
             { $$ = $1; }
 
           | function_expression
@@ -515,56 +524,54 @@ if_expression
           ;
 
 binary_expression
+         : simple_expression binary_operator simple_expression 
+           {$$ = new yy.ast.BinaryExpression($1, $2, $3, @$); }
 
-          : simple_expression binary_operator simple_expression
-            {$$ = new yy.ast.BinaryExpression($1, $2, $3, @$); }
+         | simple_expression binary_operator '(' expression ')'
+           {$$ = new yy.ast.BinaryExpression($1, $2, $4, @$); }
 
-          | simple_expression binary_operator '(' expression ')'
-            {$$ = new yy.ast.BinaryExpression($1, $2, $4, @$); }
+         | '(' expression ')' binary_operator simple_expression
+           {$$ = new yy.ast.BinaryExpression($2, $4, $5, @$); }
 
-          | '(' expression ')' binary_operator simple_expression
-            {$$ = new yy.ast.BinaryExpression($2, $4, $5, @$); }
- 
-          | '(' expression ')' binary_operator '(' expression ')'
-            {$$ = new yy.ast.BinaryExpression($2, $4, $6, @$); }
-          ;
+         | '(' expression ')' binary_operator '(' expression ')'
+           {$$ = new yy.ast.BinaryExpression($2, $4, $6, @$); }
+         
+         ;
 
 unary_expression
-          : '!' simple_expression
-            {$$ = new yy.ast.UnaryExpression($1, $2, @$);      }
-
-          | '!' '(' expression ')'
-            {$$ = new yy.ast.UnaryExpression($1, $3, @$);      }
+          :  '!' expression 
+            {$$ = new yy.ast.UnaryExpression($1, $2, @$); }
           ;
 
 simple_expression
-          :  (view_construction
-             | fun_application
-             | construct_expression 
-             | call_expression 
-             | member_expression 
-             | literal 
-             | context_property 
-             | cons 
-             | identifier 
-             | context_variable)
-             { $$ = $1; }
+          : (
+             view_construction
+             |fun_application
+             |construct_expression 
+             |call_expression 
+             |member_expression 
+             |literal 
+             |context_property 
+             |cons 
+             |identifier 
+             |context_variable)
+            { $$ = $1; }
           ;
 
 view_construction
-          :  '<' cons arguments '>'
-            { $$ = new yy.ast.ViewConstruction($2, $3, @$); }
+          : '<' cons '(' expression ')' '>'
+            { $$ = new yy.ast.ViewConstruction($2, $4, @$); }
           ;
 
 fun_application
           : '<' fun_target type_arguments partial_application '>'
             { $$ = new yy.ast.FunApplication($2, $3, $4||[], @$); }
 
-          |  '<' fun_target partial_application '>'
-           { $$ = new yy.ast.FunApplication($2, [], $3 ||[], @$); }
+          | '<' fun_target partial_application '>'
+            { $$ = new yy.ast.FunApplication($2, [], $3 ||[], @$); }
 
-          |  '<' fun_target '>'
-           { $$ = new yy.ast.FunApplication($2, [], [], @$); }
+          | '<' fun_target '>'
+            { $$ = new yy.ast.FunApplication($2, [], [], @$); }
 
           ;
 
@@ -610,28 +617,28 @@ construct_expression
           ;
 
 call_expression
-          : identifier type_arguments arguments
+          : identifier type_arguments partial_application
             {$$ = new yy.ast.CallExpression($1, $2, $3, @$);    }
 
-          | identifier arguments
+          | identifier partial_application
             {$$ = new yy.ast.CallExpression($1, [], $2, @$);    }
 
-          | context_property type_arguments arguments
+          | context_property type_arguments partial_application
             {$$ = new yy.ast.CallExpression($1, $2, $3, @$);    }
 
-          | context_property arguments
+          | context_property partial_application
             {$$ = new yy.ast.CallExpression($1, [], $2, @$);    }
 
-          | member_expression type_arguments arguments
+          | member_expression type_arguments partial_application
             {$$ = new yy.ast.CallExpression($1, $2, $3, @$);    }
 
-          | member_expression arguments
+          | member_expression partial_application
             {$$ = new yy.ast.CallExpression($1, [], $2, @$);    }
 
-          | '(' expression ')' type_arguments arguments
+          | '(' expression ')' type_arguments partial_application
             {$$ = new yy.ast.CallExpression($2, $4, $5, @$);    }
 
-          | '(' expression ')' arguments
+          | '(' expression ')' partial_application
             {$$ = new yy.ast.CallExpression($2, [], $4, @$);    }
           ;
 
@@ -670,11 +677,11 @@ member_expression
 
 function_expression
 
-          : '\\' parameter_list '=>'  expression
-            {$$ = new yy.ast.FunctionExpression($2, $4, @$);   }
+          : '\\' parameter_list '->'  expression
+            {$$ = new yy.ast.FunctionExpression($2, $4, @$); }
 
-          | '=>' expression
-            {$$ = new yy.ast.FunctionExpression([], $2, @$);   }
+          | '\\' '->' expression
+            {$$ = new yy.ast.FunctionExpression([], $3, @$); }
           ;
 
 

@@ -398,7 +398,7 @@ export class ViewConstruction {
 
     constructor(
         public cons: Constructor,
-        public context: Expression[],
+        public context: Expression,
         public location: Location) { }
 
 }

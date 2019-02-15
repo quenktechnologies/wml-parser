@@ -235,10 +235,10 @@ export declare class UnaryExpression {
 }
 export declare class ViewConstruction {
     cons: Constructor;
-    context: Expression[];
+    context: Expression;
     location: Location;
     type: string;
-    constructor(cons: Constructor, context: Expression[], location: Location);
+    constructor(cons: Constructor, context: Expression, location: Location);
 }
 export declare class FunApplication {
     target: Expression;
