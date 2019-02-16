@@ -154,6 +154,7 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 <*>'!'                                                   return '!';
 <*>','                                                   return ',';
 <*>'?'                                                   return '?';
+<*>'...'                                                 return '...';
 <*>'.'                                                   return '.';
 
 <*><<EOF>>                                               return 'EOF';
@@ -539,7 +540,10 @@ binary_expression
          ;
 
 unary_expression
-          :  '!' expression 
+          : '!' expression 
+            {$$ = new yy.ast.UnaryExpression($1, $2, @$); }
+
+          | '...' expression
             {$$ = new yy.ast.UnaryExpression($1, $2, @$); }
           ;
 
