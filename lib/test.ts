@@ -66,7 +66,7 @@ export const tests = {
 
         input: '<root>' +
             '{% for value,key in list %}' +
-      '<stem>{{key}} => {{value}}</stem>' +
+      '<stem>{{key}} ~ {{value}}</stem>' +
             '{% endfor %}' +
             '</root>'
 
