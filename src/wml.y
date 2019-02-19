@@ -456,11 +456,8 @@ for_parameters
           : parameter 
             {$$ = [$1];}
 
-          | parameter ',' parameter
-            {$$ = [$1, $2];}
-          
-          | paramter ',' paramter 
-            {$$ = [$1, $2, $3];}
+          | for_parameters ',' parameter
+            {$$ = $1.concat($3); }
           ;
             
 if_statement
