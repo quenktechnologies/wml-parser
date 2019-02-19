@@ -38,10 +38,10 @@ export declare const tests: {
     'should do it all together now': {
         input: string;
     };
-    'should parse for in expressions': {
+    'should parse for in statements': {
         input: string;
     };
-    'should parse for of expressions': {
+    'should parse for of statements': {
         input: string;
     };
     'should parse if then expressions': {

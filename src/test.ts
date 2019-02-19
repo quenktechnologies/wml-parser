@@ -53,7 +53,7 @@ export const tests = {
             '</modal>'
 
     },
-    'should parse for in expressions': {
+    'should parse for in statements': {
 
         input: '<root>' +
             '{% for value,key in [] %}' +
@@ -62,10 +62,10 @@ export const tests = {
             '</root>'
 
     },
-    'should parse for of expressions': {
+    'should parse for of statements': {
 
         input: '<root>' +
-            '{% for value,key in list %}' +
+      '{% for value,key in {} %}' +
       '<stem>{{key}} ~ {{value}}</stem>' +
             '{% endfor %}' +
             '</root>'
