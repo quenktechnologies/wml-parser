@@ -1,6 +1,6 @@
 {
   "name": "@quenk/wml-parser",
-  "version": "0.19.2",
+  "version": "0.19.3",
   "description": "WML parser.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
