@@ -7435,7 +7435,7 @@ EOF: 1,
 
       /*! Conditions:: TAG */
       /*! Rule::       \/ */
-      10: 'NOSE',
+      10: 20,
 
       /*! Conditions:: TAG */
       /*! Rule::       \{ */

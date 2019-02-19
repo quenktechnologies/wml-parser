@@ -58,7 +58,7 @@ Text ({DoubleStringCharacter}*)|({SingleStringCharacter}*)
 <TAG>{Constructor}                                       return 'CONSTRUCTOR';
 <TAG>{Identifier}                                        return 'IDENTIFIER';
 <TAG>'/>'                    this.popState();            return '/>';
-<TAG>'/'                                                 return 'NOSE';
+<TAG>'/'                                                 return '/';
 <TAG>'>'                     this.begin('CHILDREN');     return '>';
 <TAG>'{{'                    this.begin('INTERPOLATION');return '{{';
 <TAG>'{'                                                 return '{';
