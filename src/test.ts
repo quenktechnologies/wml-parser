@@ -65,7 +65,7 @@ export const tests = {
     'should parse for of statements': {
 
         input: '<root>' +
-      '{% for value,key in {} %}' +
+      '{% for value,key of {} %}' +
       '<stem>{{key}} ~ {{value}}</stem>' +
             '{% endfor %}' +
             '</root>'
