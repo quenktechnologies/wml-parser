@@ -148,7 +148,7 @@ export class FunStatement {
  */
 export class TypeParameter {
 
-    type = 'type-class';
+    type = 'type-parameter';
 
     constructor(
         public id: UnqualifiedConstructor,

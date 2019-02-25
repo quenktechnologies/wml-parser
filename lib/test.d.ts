@@ -71,7 +71,7 @@ export declare const tests: {
     'should parse short fun statements with arguments': {
         input: string;
     };
-    'should parse short fun statements with type classes': {
+    'should parse short fun statements with type parameters': {
         input: string;
     };
     'should parse extended fun statements': {
@@ -80,7 +80,7 @@ export declare const tests: {
     'should parse extended fun statements with arguments': {
         input: string;
     };
-    'should parse extended fun statements with type classes': {
+    'should parse extended fun statements with type parameters': {
         input: string;
     };
     'should parse binary expressions': {
@@ -107,7 +107,7 @@ export declare const tests: {
     'should parse typed views': {
         input: string;
     };
-    'should parse typed views with type classes': {
+    'should parse typed views with type parameters': {
         input: string;
     };
     'should parse context variables': {
@@ -138,6 +138,9 @@ export declare const tests: {
         input: string;
     };
     'should allow actual code': {
+        input: string;
+    };
+    'should recognize type parameters': {
         input: string;
     };
 };

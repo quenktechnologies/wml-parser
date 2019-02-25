@@ -132,7 +132,7 @@ export const tests = {
 
     },
 
-    'should parse short fun statements with type classes': {
+    'should parse short fun statements with type parameters': {
 
         input: '{% fun vue [A,B:C,C] (a:A) (b:B) = ' +
             '{{ (a + b) + c }} %}'
@@ -152,7 +152,7 @@ export const tests = {
 
     },
 
-    'should parse extended fun statements with type classes': {
+    'should parse extended fun statements with type parameters': {
 
         input: '{% fun vue [A,B:C,C] (a:A) (b:B) %} {{ ((a + b) + c) }} {% endfun %}'
 
@@ -201,7 +201,7 @@ export const tests = {
         input: '{% view Main (Context[String]) %} <p>{{@value}}</p>'
 
     },
-    'should parse typed views with type classes': {
+    'should parse typed views with type parameters': {
 
         input: '{% view Main [A,B] (Context[A,B]) %} <p>{{@values}}</p>'
 
@@ -322,6 +322,12 @@ export const tests = {
 
 </Panel>`
 
-    }
+    },
+
+  'should recognize type parameters': {
+
+    input: '{% fun test[A:String] (a:A) %} {{A}} {% endfun %}'
+
+  }
 
 }

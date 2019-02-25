@@ -240,14 +240,14 @@ export
 
 view_statement
 
-          : '{%' VIEW unqualified_constructor type_params? '(' type ')' '%}'
+          : '{%' VIEW unqualified_constructor type_parameters? '(' type ')' '%}'
              tag
             {$$ = new yy.ast.ViewStatement($3, $4||[], $6, $9, @$);}
           ;
 
 fun_statement
 
-          : '{%' FUN unqualified_identifier type_params parameters '%}' 
+          : '{%' FUN unqualified_identifier type_parameters parameters '%}' 
               children 
             '{%' ENDFUN '%}'
             {$$ = new yy.ast.FunStatement($3, $4, $5, $7, @$); }
@@ -257,7 +257,7 @@ fun_statement
             '{%' ENDFUN '%}'
             {$$ = new yy.ast.FunStatement($3, [], $4, $6, @$); }
 
-          | '{%' FUN unqualified_identifier type_params parameters '='
+          | '{%' FUN unqualified_identifier type_parameters parameters '='
               child '%}' 
             {$$ = new yy.ast.FunStatement($3, $4, $5, [$7], @$); }
 
@@ -265,37 +265,37 @@ fun_statement
             {$$ = new yy.ast.FunStatement($3, [], $4, [$6], @$); }
           ;
 
-type_params
-          : '[' type_class_list ']' {$$ = $2; }
+type_parameters
+          : '[' type_parameter_list ']' {$$ = $2; }
           ;
 
-type_class_list
-          : type_class
+type_parameter_list
+          : type_parameter
             {$$ = [$1];                     }
 
-          | type_class_list ',' type_class
+          | type_parameter_list ',' type_parameter
             {$$ = $1.concat($3);            }
           ;
 
-type_class
+type_parameter
           : unqualified_identifier 
-           {$$ = new yy.ast.TypedParameter($1, null, @$);}
+           {$$ = new yy.ast.TypeParameter($1, null, @$);}
 
           | unqualified_identifier ':' type
-           {$$ = new yy.ast.TypedParameter($1, $3, @$);}
+           {$$ = new yy.ast.TypeParameter($1, $3, @$);}
 
           | unqualified_constructor 
-           {$$ = new yy.ast.TypedParameter($1, null, @$);}
+           {$$ = new yy.ast.TypeParameter($1, null, @$);}
 
           | unqualified_constructor ':' type
-           {$$ = new yy.ast.TypedParameter($1, $3, @$);}
+           {$$ = new yy.ast.TypeParameter($1, $3, @$);}
           ;
 
 type 
-          : cons type_params?
+          : cons type_parameters?
             { $$ = new yy.ast.Type($1, $2||[], false, @$); }               
 
-          | cons type_params '[' ']'
+          | cons type_parameters '[' ']'
             { $$ = new yy.ast.Type($1, $2, true, @$); }
 
           | cons '[' ']'
